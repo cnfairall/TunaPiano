@@ -1,6 +1,5 @@
 ﻿using TunaPiano.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 
 namespace TunaPiano.Api
 {
@@ -61,14 +60,22 @@ namespace TunaPiano.Api
                 return Results.Ok(genre);
             });
 
-            //get genres by number of songs
+            //get genres by song count
             app.MapGet("/api/genres/popular", (TunaPianoDbContext db) =>
             {
-                IEnumerable<Genre> genresByCount = db.Genres
-                                            .Include(g => (g as Derived).SongTotal)      
-                                            .OrderByDescending(g => g.SongTotal)
-                                            .ToList();
-                return Results.Ok(genresByCount);
+                var genresByTotal = new List<Genre>();
+                var genres = db.Genres
+               .Include(g => g.Songs)
+               .ToList()
+               .OrderByDescending(g => g.SongTotal);
+
+                foreach (var genre in genres)
+                {
+                    var genreObj = db.Genres.SingleOrDefault(g => g.Id == genre.Id);
+                    genresByTotal.Add(genreObj);
+                }
+
+                return genresByTotal;
             });
         }
 
