@@ -61,15 +61,6 @@ namespace TunaPiano.Api
                 return Results.Ok(genre);
             });
 
-            //get genres by number of songs
-            app.MapGet("/api/genres/popular", (TunaPianoDbContext db) =>
-            {
-                IEnumerable<Genre> genresByCount = db.Genres
-                                            .Include(g => (g as Derived).SongTotal)      
-                                            .OrderByDescending(g => g.SongTotal)
-                                            .ToList();
-                return Results.Ok(genresByCount);
-            });
         }
 
     }
