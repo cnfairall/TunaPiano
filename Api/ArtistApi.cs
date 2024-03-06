@@ -62,7 +62,66 @@ namespace TunaPiano.Api
                 return Results.Ok(artist);
             });
 
-            
+            //search artists by genre
+            app.MapGet("/api/artists/genre/{genreId}", (TunaPianoDbContext db, int genreId) =>
+            {
+                var genre = db.Genres.SingleOrDefault(g => g.Id == genreId);
+                if (genre == null)
+                {
+                    return Results.BadRequest("No genre found");
+                }
+
+                var genreSongs = db.Songs.Where(s => s.Genres.Contains(genre)).ToList();
+                if (genreSongs == null)
+                {
+                    return Results.NotFound("No songs found for genre");
+                }
+                var genreArtists = new List<Artist>();
+                foreach (Song song in genreSongs)
+                {
+                    var artist = db.Artists.SingleOrDefault(a => a.Songs.Contains(song));
+                    genreArtists.Add(artist);
+                }
+                return Results.Ok(genreArtists);
+            });
+
+            //get related artists
+            app.MapGet("/api/{artistId}/related", (TunaPianoDbContext db, int artistId) =>
+            {
+                var selectedArtist = db.Artists
+                .Include(a => a.Songs)
+                .ThenInclude(s => s.Genres)
+                .SingleOrDefault(a => a.Id == artistId);
+
+                if (selectedArtist == null)
+                {
+                    return Results.BadRequest("No artist found");
+                }
+
+                var artistGenres = new List<Genre>();
+
+                foreach (Song song in selectedArtist.Songs)
+                {
+                    foreach (var genre in song.Genres)
+                    {
+                       var artistGenre = genre;
+                       artistGenres.Add(artistGenre);
+                    }
+                }
+
+                var genreArtists = new List<Artist>();
+         
+                foreach (Genre genre in artistGenres)
+                {
+                    var artists = db.Artists.Where(a => a.Songs.Any(s => s.Genres.Contains(genre))).ToList();
+                    foreach (var a in artists)
+                    {
+                        genreArtists.Add(a);
+                    }
+                }
+                genreArtists.RemoveAll(a => a.Id == selectedArtist.Id);
+                return Results.Ok(genreArtists.Distinct());
+            });
         }
 
     }
